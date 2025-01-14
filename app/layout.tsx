@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Roast-O-Matic | Get Roasted Faster Than Your Wi-Fi',
     description: 'A playful, automated tool for clever, humorous roasts.',
-    images: ['https://roastomatic.fun/twitter-image.jpg'],
+    images: ['https://roastomatic.fun/og-image.jpg'],
   },
 }
 

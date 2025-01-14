@@ -182,38 +182,37 @@ export default function RoastGenerator() {
             </AnimatePresence>
           </div>
         </CardContent>
-      </Card>
-
-      <motion.div
-        className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-auto md:right-auto md:top-1/2 md:-right-20 md:transform md:-translate-y-1/2 z-10 -mt-5"
-        initial={{ rotate: -10, y: 0 }}
-        animate={{ rotate: 10, y: [0, -10, 0] }}
-        transition={{
-          rotate: {
-            repeat: Infinity,
-            repeatType: "reverse",
-            duration: 2
-          },
-          y: {
-            repeat: Infinity,
-            repeatType: "reverse",
-            duration: 3,
-            ease: "easeInOut"
-          }
-        }}
-      >
-        <motion.button
-          onClick={() => handleRoast(true)}
-          disabled={isLoading}
-          className="bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold py-3 px-6 rounded-full shadow-lg transform transition-transform duration-200 ease-in-out"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+        <motion.div
+          className="absolute -left-4 top-0 -translate-y-1/2 z-10"
+          initial={{ rotate: -10, y: 0 }}
+          animate={{ rotate: 10, y: [0, -10, 0] }}
+          transition={{
+            rotate: {
+              repeat: Infinity,
+              repeatType: "reverse",
+              duration: 2
+            },
+            y: {
+              repeat: Infinity,
+              repeatType: "reverse",
+              duration: 3,
+              ease: "easeInOut"
+            }
+          }}
         >
-          <Sparkles className="w-5 h-5 mr-2 inline-block" />
-          <span className="hidden sm:inline">Surprise Me!</span>
-          <span className="sm:hidden">Surprise!</span>
-        </motion.button>
-      </motion.div>
+          <motion.button
+            onClick={() => handleRoast(true)}
+            disabled={isLoading}
+            className="bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold py-3 px-6 rounded-full shadow-lg transform transition-transform duration-200 ease-in-out"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Sparkles className="w-5 h-5 mr-2 inline-block" />
+            <span className="hidden sm:inline">Surprise Me!</span>
+            <span className="sm:hidden">Surprise!</span>
+          </motion.button>
+        </motion.div>
+      </Card>
 
       <StatsDisplay />
 
