@@ -213,6 +213,7 @@ export default function RoastGenerator() {
           </motion.button>
         </motion.div>
       </Card>
+      <p className="text-gray-600 italic text-sm md:absolute md:transform md:rotate-6 md:-right-52  md:-translate-y-1/2 md:w-48 sm:static sm:mt-2 mb-2 testx-center sm:transform-none sm:rotate-0 sm:text-center text-gray-300 sm:w-auto">Roasts are spicy—handle with humor, NOT ANGER!</p> 
 
       <StatsDisplay />
 
