@@ -203,7 +203,7 @@ export default function RoastGenerator() {
           <motion.button
             onClick={() => handleRoast(true)}
             disabled={isLoading}
-            className="bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold py-3 px-6 rounded-full shadow-lg transform transition-transform duration-200 ease-in-out"
+            className="bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold py-2 px-2 rounded-lg shadow-lg transform transition-transform duration-200 ease-in-out"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
