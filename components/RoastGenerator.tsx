@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -28,6 +28,15 @@ const roastLevels: { [key in RoastLevel]: string } = {
   'nuclear-roast': 'Nuclear Roast'
 }
 
+const soundEffects = [
+  '/sound1.mp3',
+  '/sound2.mp3',
+  '/sound3.mp3',
+  '/sound4.mp3',
+  '/sound5.mp3',
+  '/sound6.mp3'
+]
+
 export default function RoastGenerator() {
   const [theme, setTheme] = useState<Theme>('random')
   const [roastLevel, setRoastLevel] = useState<RoastLevel>('medium-burn')
@@ -37,6 +46,21 @@ export default function RoastGenerator() {
   const [isHovering, setIsHovering] = useState(false)
   const [roastTarget, setRoastTarget] = useState('')
   const [userId] = useState(getUserId())
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  useEffect(() => {
+    audioRef.current = new Audio()
+  }, [])
+
+  const playRandomSound = (delay: number = 0) => {
+    setTimeout(() => {
+      if (audioRef.current) {
+        const randomSound = soundEffects[Math.floor(Math.random() * soundEffects.length)]
+        audioRef.current.src = randomSound
+        audioRef.current.play().catch(error => console.error('Error playing sound:', error))
+      }
+    }, delay)
+  }
 
   const handleRoast = async (surpriseMe = false) => {
     setIsLoading(true)
@@ -45,6 +69,7 @@ export default function RoastGenerator() {
       const generatedRoast = await generateRoast(roastTarget, roastTheme, roastLevel)
       setRoast(generatedRoast)
       setEmoji(emojis[Math.floor(Math.random() * emojis.length)])
+      playRandomSound(1000) // 1000 milliseconds = 1 second delay
     } catch (error) {
       console.error('Error generating roast:', error)
       setRoast("Oops! Something went wrong. Please try again.")
@@ -150,8 +175,23 @@ export default function RoastGenerator() {
               disabled={isLoading || !roastTarget.trim()} 
               className="w-full bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold h-12 disabled:opacity-50"
             >
-              {isLoading ? 'Cooking up a roast...' : 'Generate Roast'}
-              <Zap className="w-4 h-4 ml-2" />
+              {isLoading ? (
+                <>
+                  Cooking up a roast...
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="inline-block ml-2"
+                  >
+                    <Zap className="w-4 h-4" />
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  Generate Roast
+                  <Zap className="w-4 h-4 ml-2" />
+                </>
+              )}
             </Button>
 
             <AnimatePresence>
