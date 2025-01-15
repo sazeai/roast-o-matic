@@ -81,7 +81,7 @@ export default function AIRoastBot() {
     
     try {
       const aiResponse = await userRoast(userInput)
-      setCurrentAIMessage(aiResponse)
+      setCurrentAIMessage(aiResponse || '')
       setIsTyping(false)
     } catch (error) {
       setIsTyping(false)
@@ -103,7 +103,7 @@ export default function AIRoastBot() {
     setIsTyping(true)
     try {
       const aiRoastResponse = await aiRoast()
-      setCurrentAIMessage(aiRoastResponse)
+      setCurrentAIMessage(aiRoastResponse || '')
       setIsTyping(false)
     } catch (error) {
       setIsTyping(false)
