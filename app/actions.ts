@@ -181,10 +181,7 @@ import { OpenAIApi, Configuration } from 'openai-edge'
 import { moderateContent } from '@/utils/contentModeration'
 import { incrementDailyStats, getDailyStats } from '@/lib/stats'
 import { getUserId } from '@/utils/userIdentification'
-
-// function generateUUID() {
-//   return crypto.randomUUID();
-// }
+import { kv } from '@vercel/kv'
 
 const config = new Configuration({
   apiKey: process.env.OPENAI_API_KEY
@@ -194,6 +191,8 @@ const openai = new OpenAIApi(config)
 const DAILY_USERS_KEY = 'daily_users'
 const DAILY_ROASTS_KEY = 'daily_roasts'
 const DAILY_STATS_KEY = 'daily_stats'
+const ROAST_MEMORY_KEY = 'recent_roasts'
+const MAX_ROAST_MEMORY = 20
 
 type Theme = 'gamer' | 'work' | 'sibling' | 'random' | 'tech-nerd' | 'foodie' | 'fitness-freak' | 'social-media-addict'
 type RoastLevel = 'mild-toast' | 'medium-burn' | 'crispy-roast' | 'sizzling-burn' | 'extra-spicy' | 'savage-flame' | 'nuclear-roast'
@@ -243,13 +242,26 @@ const roastTopics = [
   "emoji overuse"
 ]
 
+const promptEnhancers = [
+  "Imagine the most ridiculous scenario related to the theme and incorporate it.",
+  "Think of a popular meme or internet trend and weave it into the roast.",
+  "Create a witty comparison between the roast target and an unexpected object or concept.",
+  "Invent a humorous backstory for the roast target based on the theme.",
+  "Use a play on words or pun related to the theme or target.",
+]
+
 export async function generateRoast(roastTarget: string, theme: Theme, level: RoastLevel) {
   const userId = getUserId()
   console.log('Generating roast with:', { roastTarget, theme, level })
+
+  // Fetch recent roasts
+  const recentRoasts = await kv.lrange(ROAST_MEMORY_KEY, 0, -1) || []
+
   const themePrompt = themes[theme] || themes.random
   const levelPrompt = roastLevels[level]
   const randomStyle = roastStyles[Math.floor(Math.random() * roastStyles.length)]
   const randomTopic = roastTopics[Math.floor(Math.random() * roastTopics.length)]
+  const randomEnhancer = promptEnhancers[Math.floor(Math.random() * promptEnhancers.length)]
 
   let basePrompt = `${themePrompt} ${levelPrompt}`
   if (roastTarget.trim()) {
@@ -259,28 +271,42 @@ export async function generateRoast(roastTarget: string, theme: Theme, level: Ro
   const prompt = `${basePrompt}
     Use a ${randomStyle} style of humor.
     If appropriate, incorporate a joke about ${randomTopic}.
-    Ensure each roast is unique and different from previous ones.
-    Keep it brief and adhere to the specified roast level.
-    Current timestamp: ${Date.now()} (use this to seed your randomness).`
+    ${randomEnhancer}
+    Ensure this roast is unique and different from previous ones.
+    Keep it brief (1-2 sentences) and adhere to the specified roast level.
+    Make the roast relatable and contextual to the theme and target.
+    Current timestamp: ${Date.now()} (use this to seed your randomness).
+    
+    IMPORTANT: Avoid these recently used roast structures or ideas:
+    ${recentRoasts.slice(0, 3).join('\n')}
+    
+    Create a fresh, surprising roast that will make people laugh out loud.`
 
   try {
     const response = await openai.createChatCompletion({
       model: "gpt-4o-mini",
       messages: [
         {
+          role: "system",
+          content: "You are a witty, clever roast generator. Your roasts are always unique, contextual, and hit the right balance of humor and bite based on the requested level. You never explain the joke or use placeholder text."
+        },
+        {
           role: "user",
           content: prompt
         }
       ],
       temperature: 0.9,
-      max_tokens: 300,
+      max_tokens: 100,
     })
 
     const result = await response.json()
     const text = result.choices[0].message.content
 
     console.log('Generated roast:', text)
-    // Removed moderation check
+
+    // Add to roast memory
+    await kv.lpush(ROAST_MEMORY_KEY, text)
+    await kv.ltrim(ROAST_MEMORY_KEY, 0, MAX_ROAST_MEMORY - 1)
 
     // Increment stats
     await incrementDailyStats(userId)
@@ -319,8 +345,6 @@ Come up with a sharp, humorous, funny comeback that turns the tables and gives t
     const result = await response.json()
     const text = result.choices[0].message.content
 
-    // Removed moderation check
-
     // Increment stats
     await incrementDailyStats(userId)
 
@@ -352,8 +376,6 @@ export async function aiRoast() {
 
     const result = await response.json()
     const text = result.choices[0].message.content
-
-    // Removed moderation check
 
     // Increment stats
     await incrementDailyStats(userId)
