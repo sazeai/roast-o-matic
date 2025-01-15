@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { fetchDailyStats } from '@/app/actions'
+import { fetchStats } from '@/app/actions'
 import { motion, AnimatePresence } from 'framer-motion'
 
 export default function StatsDisplay() {
@@ -10,7 +10,7 @@ export default function StatsDisplay() {
 
   useEffect(() => {
     const updateStats = async () => {
-      const newStats = await fetchDailyStats()
+      const newStats = await fetchStats()
       setStats(newStats)
       setIsLoading(false)
     }
@@ -36,8 +36,7 @@ export default function StatsDisplay() {
             exit={{ opacity: 0, y: -20 }}
             className="text-gray-400"
           >
-            <span className="text-white font-semibold">{stats.uniqueUsers}</span> people roasted{' '}
-            <span className="text-white font-semibold">{stats.totalRoasts}</span> times today
+            <span className="text-white font-semibold">{stats.uniqueUsers.toLocaleString()}</span> egos bruised, <span className="text-white font-semibold">{stats.totalRoasts.toLocaleString()}</span> laughs induced!
           </motion.p>
         )}
       </AnimatePresence>
