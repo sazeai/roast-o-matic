@@ -53,16 +53,11 @@ export default function AIRoastBot() {
   const [currentAIMessage, setCurrentAIMessage] = useState('')
   const { displayedText, isComplete } = useTypingEffect(currentAIMessage)
 
-  const debouncedSetUserInput = useCallback(
-    debounce((value: string) => setUserInput(value), 300),
-    []
-  );
+const debouncedSetUserInput = useCallback(
+  debounce((value: string) => setUserInput(value), 100),
+  []
+);
 
-  useEffect(() => {
-    return () => {
-      debouncedSetUserInput.cancel();
-    };
-  }, [debouncedSetUserInput]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -251,7 +246,10 @@ export default function AIRoastBot() {
               type="text"
               placeholder="Type your roast here..."
               value={userInput}
-              onChange={(e) => debouncedSetUserInput(e.target.value)}
+              onChange={(e) => {
+                setUserInput(e.target.value); // Immediate update
+                debouncedSetUserInput(e.target.value); // Debounced update for expensive operations
+              }}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleUserRoast()}
               className="flex-grow bg-[#2A2A2A] border-[#333333] text-white placeholder-gray-400"
               disabled={isLoading}

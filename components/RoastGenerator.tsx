@@ -50,10 +50,13 @@ export default function RoastGenerator() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const debouncedSetRoastTarget = useCallback(
-    debounce((value: string) => setRoastTarget(value), 300),
+    debounce((value: string) => {
+      // Perform any expensive operations here
+      console.log('Debounced value:', value)
+      // You can add any other operations that need to be debounced
+    }, 300),
     []
   );
-
   useEffect(() => {
     return () => {
       debouncedSetRoastTarget.cancel();
@@ -137,12 +140,15 @@ export default function RoastGenerator() {
       <Card className="bg-[#232323] border-0 shadow-2xl">
         <CardContent className="p-3">
           <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-4">
               <Input
                 type="text"
                 placeholder="Enter name, description, or anything about the roast target"
                 value={roastTarget}
-                onChange={(e) => debouncedSetRoastTarget(e.target.value)}
+                onChange={(e) => {
+                  setRoastTarget(e.target.value); // Immediate update for responsive typing
+                  debouncedSetRoastTarget(e.target.value); // Debounced operation
+                }}
                 className="bg-[#2A2A2A] border-0 text-white placeholder-gray-400 h-12"
               />
             </div>
