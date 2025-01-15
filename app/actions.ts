@@ -14,6 +14,19 @@ const ALL_TIME_USERS_KEY = 'all_time_users'
 const ALL_TIME_ROASTS_KEY = 'all_time_roasts'
 const ROAST_MEMORY_KEY = 'recent_roasts'
 const MAX_ROAST_MEMORY = 20
+const CACHE_EXPIRY = 60 * 60 * 1000 // 1 hour in milliseconds
+
+let localCache: {
+  recentRoasts: string[];
+  allTimeUsers: Set<string>;
+  allTimeRoasts: number;
+  lastUpdated: number;
+} = {
+  recentRoasts: [],
+  allTimeUsers: new Set(),
+  allTimeRoasts: 0,
+  lastUpdated: 0
+}
 
 type Theme = 'gamer' | 'work' | 'sibling' | 'random' | 'tech-nerd' | 'foodie' | 'fitness-freak' | 'social-media-addict'
 type RoastLevel = 'mild-toast' | 'medium-burn' | 'crispy-roast' | 'sizzling-burn' | 'extra-spicy' | 'savage-flame' | 'nuclear-roast'
@@ -71,12 +84,42 @@ const promptEnhancers = [
   "Use a play on words or pun related to the theme or target.",
 ]
 
+async function updateLocalCache() {
+  try {
+    const [recentRoasts, allTimeUsers, allTimeRoasts] = await Promise.all([
+      kv.lrange(ROAST_MEMORY_KEY, 0, -1),
+      kv.smembers(ALL_TIME_USERS_KEY),
+      kv.get<number>(ALL_TIME_ROASTS_KEY)
+    ])
+
+    localCache = {
+      recentRoasts: recentRoasts || [],
+      allTimeUsers: new Set(allTimeUsers),
+      allTimeRoasts: allTimeRoasts || 0,
+      lastUpdated: Date.now()
+    }
+  } catch (error) {
+    console.error('Error updating local cache:', error)
+  }
+}
+
 async function incrementAllTimeStats(userId: string) {
-  await kv.sadd(ALL_TIME_USERS_KEY, userId)
-  await kv.incr(ALL_TIME_ROASTS_KEY)
+  try {
+    if (!localCache.allTimeUsers.has(userId)) {
+      await kv.sadd(ALL_TIME_USERS_KEY, userId)
+      localCache.allTimeUsers.add(userId)
+    }
+    await kv.incr(ALL_TIME_ROASTS_KEY)
+    localCache.allTimeRoasts++
+  } catch (error) {
+    console.error('Error incrementing all-time stats:', error)
+  }
 }
 
 export async function incrementStats(userId: string) {
+  if (Date.now() - localCache.lastUpdated > CACHE_EXPIRY) {
+    await updateLocalCache()
+  }
   await incrementAllTimeStats(userId)
 }
 
@@ -84,8 +127,11 @@ export async function generateRoast(roastTarget: string, theme: Theme, level: Ro
   const userId = getUserId()
   console.log('Generating roast with:', { roastTarget, theme, level })
 
-  // Fetch recent roasts
-  const recentRoasts = await kv.lrange(ROAST_MEMORY_KEY, 0, -1) || []
+  if (Date.now() - localCache.lastUpdated > CACHE_EXPIRY) {
+    await updateLocalCache()
+  }
+
+  const recentRoasts = localCache.recentRoasts
 
   const themePrompt = themes[theme] || themes.random
   const levelPrompt = roastLevels[level]
@@ -134,9 +180,15 @@ export async function generateRoast(roastTarget: string, theme: Theme, level: Ro
 
     console.log('Generated roast:', text)
 
-    // Add to roast memory
-    await kv.lpush(ROAST_MEMORY_KEY, text)
-    await kv.ltrim(ROAST_MEMORY_KEY, 0, MAX_ROAST_MEMORY - 1)
+    try {
+      // Update local cache and KV store
+      localCache.recentRoasts.unshift(text)
+      localCache.recentRoasts = localCache.recentRoasts.slice(0, MAX_ROAST_MEMORY)
+      await kv.lpush(ROAST_MEMORY_KEY, text)
+      await kv.ltrim(ROAST_MEMORY_KEY, 0, MAX_ROAST_MEMORY - 1)
+    } catch (error) {
+      console.error('Error updating roast memory:', error)
+    }
 
     // Update stats
     await incrementStats(userId)
@@ -157,8 +209,8 @@ export async function userRoast(userInput: string) {
       return "I can't respond to that kind of language. Let's keep it clean and fun!"
     }
 
-  const prompt = `The user tried to roast the AI with: "${userInput}"
-Come up with a sharp, humorous, funny comeback that turns the tables and gives the user a playful burn. Make it clever, surprising, and light-hearted, keeping it short and snappy (1-2 sentences). Each response should be fresh and unique, giving them a reason to laugh at themselves.`
+    const prompt = `The user tried to roast the AI with: "${userInput}"
+    Come up with a sharp, humorous, funny comeback that turns the tables and gives the user a playful burn. Make it clever, surprising, and light-hearted, keeping it short and snappy (1-2 sentences). Each response should be fresh and unique, giving them a reason to laugh at themselves.`
 
     const response = await openai.createChatCompletion({
       model: "gpt-4o-mini",
@@ -218,10 +270,12 @@ export async function aiRoast() {
 }
 
 export async function fetchStats() {
-  const [uniqueUsers, totalRoasts] = await Promise.all([
-    kv.scard(ALL_TIME_USERS_KEY),
-    kv.get<number>(ALL_TIME_ROASTS_KEY)
-  ])
-  return { uniqueUsers, totalRoasts: totalRoasts || 0 }
+  if (Date.now() - localCache.lastUpdated > CACHE_EXPIRY) {
+    await updateLocalCache()
+  }
+  return { 
+    uniqueUsers: localCache.allTimeUsers.size, 
+    totalRoasts: localCache.allTimeRoasts 
+  }
 }
 
