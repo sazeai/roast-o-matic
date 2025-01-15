@@ -1,32 +1,14 @@
 'use server'
 
-import { OpenAIApi, Configuration } from 'openai-edge'
+import { kv } from '@vercel/kv'
+import { z } from 'zod'
 import { moderateContent } from '@/utils/contentModeration'
 import { getUserId } from '@/utils/userIdentification'
-import { kv } from '@vercel/kv'
+import OpenAI from "openai";
 
-const config = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY
-})
-const openai = new OpenAIApi(config)
-
-const ALL_TIME_USERS_KEY = 'all_time_users'
-const ALL_TIME_ROASTS_KEY = 'all_time_roasts'
-const ROAST_MEMORY_KEY = 'recent_roasts'
-const MAX_ROAST_MEMORY = 20
-const CACHE_EXPIRY = 60 * 60 * 1000 // 1 hour in milliseconds
-
-let localCache: {
-  recentRoasts: string[];
-  allTimeUsers: Set<string>;
-  allTimeRoasts: number;
-  lastUpdated: number;
-} = {
-  recentRoasts: [],
-  allTimeUsers: new Set(),
-  allTimeRoasts: 0,
-  lastUpdated: 0
-}
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 type Theme = 'gamer' | 'work' | 'sibling' | 'random' | 'tech-nerd' | 'foodie' | 'fitness-freak' | 'social-media-addict'
 type RoastLevel = 'mild-toast' | 'medium-burn' | 'crispy-roast' | 'sizzling-burn' | 'extra-spicy' | 'savage-flame' | 'nuclear-roast'
@@ -123,9 +105,37 @@ export async function incrementStats(userId: string) {
   await incrementAllTimeStats(userId)
 }
 
-export async function generateRoast(roastTarget: string, theme: Theme, level: RoastLevel) {
+const config = {
+  apiKey: process.env.OPENAI_API_KEY
+}
+
+const ALL_TIME_USERS_KEY = 'all_time_users'
+const ALL_TIME_ROASTS_KEY = 'all_time_roasts'
+const ROAST_MEMORY_KEY = 'recent_roasts'
+const MAX_ROAST_MEMORY = 20
+const CACHE_EXPIRY = 60 * 60 * 1000 // 1 hour in milliseconds
+
+let localCache: {
+  recentRoasts: string[];
+  allTimeUsers: Set<string>;
+  allTimeRoasts: number;
+  lastUpdated: number;
+} = {
+  recentRoasts: [],
+  allTimeUsers: new Set(),
+  allTimeRoasts: 0,
+  lastUpdated: 0
+}
+
+
+export async function generateRoast(roastTarget: string | undefined, theme: Theme, level: RoastLevel) {
   const userId = getUserId()
   console.log('Generating roast with:', { roastTarget, theme, level })
+
+  const isValid = await validateRoastInput(roastTarget, theme, level);
+  if (!isValid) {
+    return "Invalid input. Please try again with valid parameters.";
+  }
 
   if (Date.now() - localCache.lastUpdated > CACHE_EXPIRY) {
     await updateLocalCache()
@@ -140,8 +150,10 @@ export async function generateRoast(roastTarget: string, theme: Theme, level: Ro
   const randomEnhancer = promptEnhancers[Math.floor(Math.random() * promptEnhancers.length)]
 
   let basePrompt = `${themePrompt} ${levelPrompt}`
-  if (roastTarget.trim()) {
+  if (roastTarget && roastTarget.trim()) {
     basePrompt += ` The roast target is: ${roastTarget}.`
+  } else {
+    basePrompt += ` Generate a general roast without a specific target.`
   }
 
   const prompt = `${basePrompt}
@@ -159,20 +171,27 @@ export async function generateRoast(roastTarget: string, theme: Theme, level: Ro
     Create a fresh, surprising roast that will make people laugh out loud.`
 
   try {
-    const response = await openai.createChatCompletion({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are a witty, clever roast generator. Your roasts are always unique, contextual, and hit the right balance of humor and bite based on the requested level. You never explain the joke or use placeholder text."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.9,
-      max_tokens: 100,
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: "You are a witty, clever roast generator. Your roasts are always unique, contextual, and hit the right balance of humor and bite based on the requested level. You never explain the joke or use placeholder text."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.9,
+        max_tokens: 100,
+      })
     })
 
     const result = await response.json()
@@ -202,6 +221,10 @@ export async function generateRoast(roastTarget: string, theme: Theme, level: Ro
 
 export async function userRoast(userInput: string) {
   const userId = getUserId()
+  const isValid = await validateUserRoastInput(userInput);
+  if (!isValid) {
+    return "Invalid input. Please try again with a valid roast.";
+  }
   try {
     // First, moderate the user input
     const isInputSafe = await moderateContent(userInput)
@@ -212,20 +235,14 @@ export async function userRoast(userInput: string) {
     const prompt = `The user tried to roast the AI with: "${userInput}"
     Come up with a sharp, humorous, funny comeback that turns the tables and gives the user a playful burn. Make it clever, surprising, and light-hearted, keeping it short and snappy (1-2 sentences). Each response should be fresh and unique, giving them a reason to laugh at themselves.`
 
-    const response = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
+      messages: [{ role: "user", content: prompt }],
       temperature: 0.8,
       max_tokens: 300,
-    })
+    });
 
-    const result = await response.json()
-    const text = result.choices[0].message.content
+    const text = completion.choices[0].message.content;
 
     // Increment stats
     await incrementStats(userId)
@@ -244,16 +261,23 @@ export async function aiRoast() {
   Keep it light-hearted and playful, but with a sharp wit. The roast should be 1-2 sentences long.`
 
   try {
-    const response = await openai.createChatCompletion({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.8,
-      max_tokens: 100,
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.8,
+        max_tokens: 100,
+      })
     })
 
     const result = await response.json()
@@ -276,6 +300,36 @@ export async function fetchStats() {
   return { 
     uniqueUsers: localCache.allTimeUsers.size, 
     totalRoasts: localCache.allTimeRoasts 
+  }
+}
+
+export async function validateRoastInput(roastTarget: string | undefined, theme: Theme, level: RoastLevel) {
+  const schema = z.object({
+    roastTarget: z.string().min(1).max(100).optional(),
+    theme: z.enum(['gamer', 'work', 'sibling', 'random', 'tech-nerd', 'foodie', 'fitness-freak', 'social-media-addict']),
+    level: z.enum(['mild-toast', 'medium-burn', 'crispy-roast', 'sizzling-burn', 'extra-spicy', 'savage-flame', 'nuclear-roast']),
+  });
+
+  try {
+    schema.parse({ roastTarget, theme, level });
+    return true;
+  } catch (error) {
+    console.error('Validation error:', error);
+    return false;
+  }
+}
+
+export async function validateUserRoastInput(userInput: string) {
+  const schema = z.object({
+    userInput: z.string().min(1).max(500),
+  });
+
+  try {
+    schema.parse({ userInput });
+    return true;
+  } catch (error) {
+    console.error('Validation error:', error);
+    return false;
   }
 }
 

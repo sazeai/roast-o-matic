@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { aiRoast, userRoast } from '@/app/actions'
 import { toast } from '@/hooks/use-toast'
 import { getUserId } from '@/utils/userIdentification'
+import debounce from 'lodash.debounce';
 
 // Custom hook for typing effect
 const useTypingEffect = (text: string, speed: number = 30) => {
@@ -51,6 +52,17 @@ export default function AIRoastBot() {
   const [userId] = useState(getUserId())
   const [currentAIMessage, setCurrentAIMessage] = useState('')
   const { displayedText, isComplete } = useTypingEffect(currentAIMessage)
+
+  const debouncedSetUserInput = useCallback(
+    debounce((value: string) => setUserInput(value), 300),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSetUserInput.cancel();
+    };
+  }, [debouncedSetUserInput]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -239,7 +251,7 @@ export default function AIRoastBot() {
               type="text"
               placeholder="Type your roast here..."
               value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
+              onChange={(e) => debouncedSetUserInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleUserRoast()}
               className="flex-grow bg-[#2A2A2A] border-[#333333] text-white placeholder-gray-400"
               disabled={isLoading}

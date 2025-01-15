@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
@@ -12,6 +12,7 @@ import StatsDisplay from './StatsDisplay'
 import Link from 'next/link'
 import { toast } from "@/hooks/use-toast"
 import { getUserId } from '@/utils/userIdentification'
+import debounce from 'lodash/debounce'
 
 type Theme = 'gamer' | 'work' | 'sibling' | 'random' | 'tech-nerd' | 'foodie' | 'fitness-freak' | 'social-media-addict'
 type RoastLevel = 'mild-toast' | 'medium-burn' | 'crispy-roast' | 'sizzling-burn' | 'extra-spicy' | 'savage-flame' | 'nuclear-roast'
@@ -48,6 +49,17 @@ export default function RoastGenerator() {
   const [userId] = useState(getUserId())
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
+  const debouncedSetRoastTarget = useCallback(
+    debounce((value: string) => setRoastTarget(value), 300),
+    []
+  );
+
+  useEffect(() => {
+    return () => {
+      debouncedSetRoastTarget.cancel();
+    };
+  }, [debouncedSetRoastTarget]);
+
   useEffect(() => {
     audioRef.current = new Audio()
   }, [])
@@ -66,10 +78,12 @@ export default function RoastGenerator() {
     setIsLoading(true)
     const roastTheme = surpriseMe ? 'random' : theme
     try {
-      const generatedRoast = await generateRoast(roastTarget, roastTheme, roastLevel)
+      const generatedRoast = await generateRoast(surpriseMe ? undefined : roastTarget, roastTheme, roastLevel)
       setRoast(generatedRoast)
       setEmoji(emojis[Math.floor(Math.random() * emojis.length)])
-      playRandomSound(1000) // 1000 milliseconds = 1 second delay
+      if (!generatedRoast.startsWith("Invalid input") && !generatedRoast.startsWith("Sorry, I couldn't")) {
+        playRandomSound(1000) // 1000 milliseconds = 1 second delay
+      }
     } catch (error) {
       console.error('Error generating roast:', error)
       setRoast("Oops! Something went wrong. Please try again.")
@@ -128,7 +142,7 @@ export default function RoastGenerator() {
                 type="text"
                 placeholder="Enter name, description, or anything about the roast target"
                 value={roastTarget}
-                onChange={(e) => setRoastTarget(e.target.value)}
+                onChange={(e) => debouncedSetRoastTarget(e.target.value)}
                 className="bg-[#2A2A2A] border-0 text-white placeholder-gray-400 h-12"
               />
             </div>
@@ -172,7 +186,7 @@ export default function RoastGenerator() {
 
             <Button 
               onClick={() => handleRoast()} 
-              disabled={isLoading || !roastTarget.trim()} 
+              disabled={isLoading} 
               className="w-full bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold h-12 disabled:opacity-50"
             >
               {isLoading ? (
