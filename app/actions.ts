@@ -79,14 +79,16 @@ const promptEnhancers = [
 
 async function updateLocalCache() {
   try {
-    const [recentRoasts, totalRoasts] = await Promise.all([
+    const [recentRoasts, mainRoastCount, aiBotRoastCount] = await Promise.all([
       kv.lrange(ROAST_MEMORY_KEY, 0, -1),
-      kv.get<number>(TOTAL_ROASTS_KEY),
+      kv.get<number>(MAIN_ROAST_COUNT_KEY),
+      kv.get<number>(AI_BOT_ROAST_COUNT_KEY),
     ])
 
     localCache = {
       recentRoasts: recentRoasts || [],
-      totalRoasts: totalRoasts || 0,
+      mainRoastCount: mainRoastCount || 0,
+      aiBotRoastCount: aiBotRoastCount || 0,
       lastUpdated: Date.now(),
     }
   } catch (error) {
@@ -109,17 +111,21 @@ const config = {
 }
 
 const TOTAL_ROASTS_KEY = "total_roasts"
+const MAIN_ROAST_COUNT_KEY = "main_roast_count"
+const AI_BOT_ROAST_COUNT_KEY = "ai_bot_roast_count"
 const ROAST_MEMORY_KEY = "recent_roasts"
 const MAX_ROAST_MEMORY = 20
 const CACHE_EXPIRY = 60 * 60 * 1000 // 1 hour in milliseconds
 
 let localCache: {
   recentRoasts: string[]
-  totalRoasts: number
+  mainRoastCount: number
+  aiBotRoastCount: number
   lastUpdated: number
 } = {
   recentRoasts: [],
-  totalRoasts: 0,
+  mainRoastCount: 0,
+  aiBotRoastCount: 0,
   lastUpdated: 0,
 }
 
@@ -205,7 +211,8 @@ export async function generateRoast(roastTarget: string | undefined, theme: Them
     }
 
     // Update total roasts count
-    await incrementTotalRoasts()
+    await kv.incr(MAIN_ROAST_COUNT_KEY)
+    localCache.mainRoastCount++
 
     return text
   } catch (error) {
@@ -239,7 +246,8 @@ export async function userRoast(userInput: string) {
     const text = completion.choices[0].message.content
 
     // Increment total roasts count
-    await incrementTotalRoasts()
+    await kv.incr(AI_BOT_ROAST_COUNT_KEY)
+    localCache.aiBotRoastCount++
 
     return text
   } catch (error) {
@@ -277,7 +285,8 @@ export async function aiRoast() {
     const text = result.choices[0].message.content
 
     // Increment total roasts count
-    await incrementTotalRoasts()
+    await kv.incr(AI_BOT_ROAST_COUNT_KEY)
+    localCache.aiBotRoastCount++
 
     return text
   } catch (error) {
@@ -293,10 +302,10 @@ export async function fetchStats() {
     await updateLocalCache()
   }
   console.log("Returning stats:", {
-    totalRoasts: localCache.totalRoasts,
+    totalRoasts: localCache.mainRoastCount,
   })
   return {
-    totalRoasts: localCache.totalRoasts,
+    totalRoasts: localCache.mainRoastCount,
   }
 }
 
