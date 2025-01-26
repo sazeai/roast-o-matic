@@ -1,64 +1,42 @@
-'use client'
+import React, { useState, useEffect } from "react"
+import { fetchStats } from "@/app/actions"
 
-import { useEffect, useState } from 'react'
-import { fetchStats } from '@/app/actions'
-import { motion, AnimatePresence } from 'framer-motion'
-
-export default function StatsDisplay() {
+const StatsDisplay = () => {
   const [stats, setStats] = useState({ uniqueUsers: 0, totalRoasts: 0 })
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const updateStats = async () => {
+    const fetchStatsData = async () => {
       try {
-        const newStats = await fetchStats()
-        setStats(newStats)
-        setError(null)
-      } catch (err) {
-        console.error('Error fetching stats:', err)
-        setError('Unable to fetch latest stats')
-      } finally {
-        setIsLoading(false)
+        const data = await fetchStats()
+        setStats(data)
+      } catch (error) {
+        console.error("Error fetching stats:", error)
       }
     }
 
-    updateStats()
-    // Update stats every minute
-    const interval = setInterval(updateStats, 60000)
-    return () => clearInterval(interval)
+    fetchStatsData()
+    // Set up an interval to fetch stats every 5 minutes
+    const intervalId = setInterval(fetchStatsData, 5 * 60 * 1000)
+
+    return () => clearInterval(intervalId)
   }, [])
 
   return (
-    <div className="mt-8 text-center">
-      <div className="flex justify-center gap-1 mb-2">
-        {'★★★★★'.split('').map((star, i) => (
-          <span key={i} className="text-[#FFB800]">{star}</span>
-        ))}
+    <div className="bg-[#2A2A2A] p-4 rounded-lg shadow-lg">
+      <h2 className="text-xl font-bold mb-4 text-white">Roast Statistics</h2>
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <p className="text-gray-400">Unique Users</p>
+          <p className="text-2xl font-bold text-[#FFB800]">{stats.uniqueUsers}</p>
+        </div>
+        <div>
+          <p className="text-gray-400">Total Roasts</p>
+          <p className="text-2xl font-bold text-[#FFB800]">{stats.totalRoasts}</p>
+        </div>
       </div>
-      <AnimatePresence mode="wait">
-        {!isLoading && !error && (
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="text-gray-400"
-          >
-            <span className="text-white font-semibold">{stats.uniqueUsers.toLocaleString()}</span> egos bruised, <span className="text-white font-semibold">{stats.totalRoasts.toLocaleString()}</span> laughs induced!
-          </motion.p>
-        )}
-        {!isLoading && error && (
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="text-gray-400"
-          >
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
     </div>
   )
 }
+
+export default StatsDisplay
 
