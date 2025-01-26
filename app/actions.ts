@@ -3,7 +3,6 @@
 import { kv } from "@vercel/kv"
 import { z } from "zod"
 import { moderateContent } from "@/utils/contentModeration"
-import { getUserId } from "@/utils/userIdentification"
 import OpenAI from "openai"
 
 const openai = new OpenAI({
@@ -80,18 +79,14 @@ const promptEnhancers = [
 
 async function updateLocalCache() {
   try {
-    const [recentRoasts, mainRoastUsers, mainRoastCount, aiBotRoastCount] = await Promise.all([
+    const [recentRoasts, totalRoasts] = await Promise.all([
       kv.lrange(ROAST_MEMORY_KEY, 0, -1),
-      kv.smembers(MAIN_ROAST_USERS_KEY),
-      kv.get<number>(MAIN_ROAST_COUNT_KEY),
-      kv.get<number>(AI_BOT_ROAST_COUNT_KEY),
+      kv.get<number>(TOTAL_ROASTS_KEY),
     ])
 
     localCache = {
       recentRoasts: recentRoasts || [],
-      mainRoastUsers: new Set(mainRoastUsers),
-      mainRoastCount: mainRoastCount || 0,
-      aiBotRoastCount: aiBotRoastCount || 0,
+      totalRoasts: totalRoasts || 0,
       lastUpdated: Date.now(),
     }
   } catch (error) {
@@ -99,69 +94,36 @@ async function updateLocalCache() {
   }
 }
 
-async function incrementMainRoastStats(userId: string) {
+async function incrementTotalRoasts() {
   try {
-    console.log("Incrementing main roast stats for user:", userId)
-    if (!localCache.mainRoastUsers.has(userId)) {
-      console.log("New user detected, adding to KV store and local cache")
-      await kv.sadd(MAIN_ROAST_USERS_KEY, userId)
-      localCache.mainRoastUsers.add(userId)
-    }
-    await kv.incr(MAIN_ROAST_COUNT_KEY)
-    localCache.mainRoastCount++
-    console.log("Updated main roast stats:", {
-      uniqueUsers: localCache.mainRoastUsers.size,
-      totalRoasts: localCache.mainRoastCount,
-    })
+    await kv.incr(TOTAL_ROASTS_KEY)
+    localCache.totalRoasts++
+    console.log("Updated total roasts:", localCache.totalRoasts)
   } catch (error) {
-    console.error("Error incrementing main roast stats:", error)
+    console.error("Error incrementing total roasts:", error)
   }
-}
-
-async function incrementAIBotRoastCount() {
-  try {
-    await kv.incr(AI_BOT_ROAST_COUNT_KEY)
-    localCache.aiBotRoastCount++
-    console.log("Updated AI bot roast count:", localCache.aiBotRoastCount)
-  } catch (error) {
-    console.error("Error incrementing AI bot roast count:", error)
-  }
-}
-
-export async function incrementStats(userId: string) {
-  if (Date.now() - localCache.lastUpdated > CACHE_EXPIRY) {
-    await updateLocalCache()
-  }
-  await incrementMainRoastStats(userId)
 }
 
 const config = {
   apiKey: process.env.OPENAI_API_KEY,
 }
 
-const MAIN_ROAST_USERS_KEY = "main_roast_users"
-const MAIN_ROAST_COUNT_KEY = "main_roast_count"
-const AI_BOT_ROAST_COUNT_KEY = "ai_bot_roast_count"
+const TOTAL_ROASTS_KEY = "total_roasts"
 const ROAST_MEMORY_KEY = "recent_roasts"
 const MAX_ROAST_MEMORY = 20
 const CACHE_EXPIRY = 60 * 60 * 1000 // 1 hour in milliseconds
 
 let localCache: {
   recentRoasts: string[]
-  mainRoastUsers: Set<string>
-  mainRoastCount: number
-  aiBotRoastCount: number
+  totalRoasts: number
   lastUpdated: number
 } = {
   recentRoasts: [],
-  mainRoastUsers: new Set(),
-  mainRoastCount: 0,
-  aiBotRoastCount: 0,
+  totalRoasts: 0,
   lastUpdated: 0,
 }
 
 export async function generateRoast(roastTarget: string | undefined, theme: Theme, level: RoastLevel) {
-  const userId = getUserId()
   console.log("Generating roast with:", { roastTarget, theme, level })
 
   const isValid = await validateRoastInput(roastTarget, theme, level)
@@ -242,8 +204,8 @@ export async function generateRoast(roastTarget: string | undefined, theme: Them
       console.error("Error updating roast memory:", error)
     }
 
-    // Update stats for main roast generator
-    await incrementMainRoastStats(userId)
+    // Update total roasts count
+    await incrementTotalRoasts()
 
     return text
   } catch (error) {
@@ -253,7 +215,6 @@ export async function generateRoast(roastTarget: string | undefined, theme: Them
 }
 
 export async function userRoast(userInput: string) {
-  const userId = getUserId()
   const isValid = await validateUserRoastInput(userInput)
   if (!isValid) {
     return "Invalid input. Please try again with a valid roast."
@@ -277,8 +238,8 @@ export async function userRoast(userInput: string) {
 
     const text = completion.choices[0].message.content
 
-    // Increment AI bot roast count
-    await incrementAIBotRoastCount()
+    // Increment total roasts count
+    await incrementTotalRoasts()
 
     return text
   } catch (error) {
@@ -288,7 +249,6 @@ export async function userRoast(userInput: string) {
 }
 
 export async function aiRoast() {
-  const userId = getUserId()
   const prompt = `Generate a creative, unexpected, and funny roast directed at the user. 
   Make it feel spontaneous and unique. Focus on common human behaviors, habits, or personality traits. 
   Keep it light-hearted and playful, but with a sharp wit. The roast should be 1-2 sentences long.`
@@ -316,8 +276,8 @@ export async function aiRoast() {
     const result = await response.json()
     const text = result.choices[0].message.content
 
-    // Increment AI bot roast count
-    await incrementAIBotRoastCount()
+    // Increment total roasts count
+    await incrementTotalRoasts()
 
     return text
   } catch (error) {
@@ -333,14 +293,10 @@ export async function fetchStats() {
     await updateLocalCache()
   }
   console.log("Returning stats:", {
-    uniqueUsers: localCache.mainRoastUsers.size,
-    totalRoasts: localCache.mainRoastCount,
-    aiBotRoasts: localCache.aiBotRoastCount,
+    totalRoasts: localCache.totalRoasts,
   })
   return {
-    uniqueUsers: localCache.mainRoastUsers.size,
-    totalRoasts: localCache.mainRoastCount,
-    aiBotRoasts: localCache.aiBotRoastCount,
+    totalRoasts: localCache.totalRoasts,
   }
 }
 
