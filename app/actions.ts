@@ -96,13 +96,13 @@ async function updateLocalCache() {
   }
 }
 
-async function incrementTotalRoasts() {
+async function incrementMainRoastCount() {
   try {
-    await kv.incr(TOTAL_ROASTS_KEY)
-    localCache.totalRoasts++
-    console.log("Updated total roasts:", localCache.totalRoasts)
+    await kv.incr(MAIN_ROAST_COUNT_KEY)
+    localCache.mainRoastCount++
+    console.log("Updated main roast count:", localCache.mainRoastCount)
   } catch (error) {
-    console.error("Error incrementing total roasts:", error)
+    console.error("Error incrementing main roast count:", error)
   }
 }
 
@@ -110,7 +110,6 @@ const config = {
   apiKey: process.env.OPENAI_API_KEY,
 }
 
-const TOTAL_ROASTS_KEY = "total_roasts"
 const MAIN_ROAST_COUNT_KEY = "main_roast_count"
 const AI_BOT_ROAST_COUNT_KEY = "ai_bot_roast_count"
 const ROAST_MEMORY_KEY = "recent_roasts"
@@ -122,6 +121,7 @@ let localCache: {
   mainRoastCount: number
   aiBotRoastCount: number
   lastUpdated: number
+  totalRoasts?: number
 } = {
   recentRoasts: [],
   mainRoastCount: 0,
@@ -210,9 +210,8 @@ export async function generateRoast(roastTarget: string | undefined, theme: Them
       console.error("Error updating roast memory:", error)
     }
 
-    // Update total roasts count
-    await kv.incr(MAIN_ROAST_COUNT_KEY)
-    localCache.mainRoastCount++
+    // Update main roast count
+    await incrementMainRoastCount()
 
     return text
   } catch (error) {
