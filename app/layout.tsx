@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Roast-O-Matic | Get Roasted Faster Than Your Wi-Fi',
   description: 'Get roasted by the most savage AI in the multiverse!',
+   verification: {
+    google: 'cX5G8Ppw6xFKrCObdgq7qkjOG3eZGBgyDxSBnQnvv24',
+  },
   openGraph: {
     title: 'Roast-O-Matic | Get Roasted Faster Than Your Wi-Fi',
     description: 'A playful, automated tool designed to generate clever, humorous comebacks or roasts.',
