@@ -46,7 +46,7 @@ export default function StatsDisplay() {
             exit={{ opacity: 0, y: -20 }}
             className="text-gray-400"
           >
-            <span className="text-white text-lg font-semibold">{totalRoasts.toLocaleString()}</span> laughs induced!
+            <span className="text-white text-lg font-semibold">{totalRoasts.toLocaleString()}</span> Laughs Induced!
           </motion.p>
         )}
         {!isLoading && error && (
