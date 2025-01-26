@@ -8,7 +8,6 @@ import { Sparkles, Zap, Bot, User, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { aiRoast, userRoast } from '@/app/actions'
 import { toast } from '@/hooks/use-toast'
-import { getUserId } from '@/utils/userIdentification'
 import debounce from 'lodash.debounce';
 
 // Custom hook for typing effect
@@ -49,7 +48,6 @@ export default function AIRoastBot() {
   const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [userId] = useState(getUserId())
   const [currentAIMessage, setCurrentAIMessage] = useState('')
   const { displayedText, isComplete } = useTypingEffect(currentAIMessage)
 
