@@ -294,7 +294,7 @@ export default function RoastGenerator() {
             onMouseLeave={() => setIsHovering(false)}
           >
             <h3 className="text-2xl font-bold mb-2 text-white">Ready for a Real Challenge?</h3>
-            <p className="text-gray-300 mb-4">Think you can out-roast an AI? Prove it!</p>
+            <p className="text-gray-300 mb-4">Bring It, Human. The Bot’s Got Daddy Issues and a PhD in Sass.</p>
             <motion.div 
               className="inline-flex items-center gap-2 bg-[#FFB800] text-black font-semibold py-2 px-4 rounded-full"
               whileHover={{ scale: 1.1 }}
