@@ -4,7 +4,7 @@
 **AI-Powered Roast Generator | Serve Burns Faster Than Your Wi-Fi Drops**  
 👉 **Live Site**: [roastomatic.fun](https://www.roastomatic.fun)  
 
-![Roast-O-Matic Demo](https://roastomatic.fun/og-image.jpg) *Replace with actual screenshot URL*
+![Roast-O-Matic Demo](https://roastomatic.fun/og-image.jpg) 
 
 ---
 
