@@ -1,94 +1,95 @@
-'use client'
+"use client"
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Sparkles, Zap, Bot, Share2, Flame } from 'lucide-react'
-import { generateRoast } from '@/app/actions'
-import { motion, AnimatePresence } from 'framer-motion'
-import StatsDisplay from './StatsDisplay'
-import Link from 'next/link'
+import { Sparkles, Zap, Bot, Share2, Flame } from "lucide-react"
+import { generateRoast } from "@/app/actions"
+import { motion, AnimatePresence } from "framer-motion"
+import StatsDisplay from "./StatsDisplay"
+import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
-import { getUserId } from '@/utils/userIdentification'
-import debounce from 'lodash/debounce'
+import { getUserId } from "@/utils/userIdentification"
+import debounce from "lodash/debounce"
 
-type Theme = 'gamer' | 'work' | 'sibling' | 'random' | 'tech-nerd' | 'foodie' | 'fitness-freak' | 'social-media-addict'
-type RoastLevel = 'mild-toast' | 'medium-burn' | 'crispy-roast' | 'sizzling-burn' | 'extra-spicy' | 'savage-flame' | 'nuclear-roast'
+type Theme = "gamer" | "work" | "sibling" | "random" | "tech-nerd" | "foodie" | "fitness-freak" | "social-media-addict"
+type RoastLevel =
+  | "mild-toast"
+  | "medium-burn"
+  | "crispy-roast"
+  | "sizzling-burn"
+  | "extra-spicy"
+  | "savage-flame"
+  | "nuclear-roast"
 
-const emojis = ['🔥', '😂', '💀', '🤯', '🎭']
+const emojis = ["🔥", "😂", "💀", "🤯", "🎭"]
 
 const roastLevels: { [key in RoastLevel]: string } = {
-  'mild-toast': 'Mild Toast',
-  'medium-burn': 'Medium Burn',
-  'crispy-roast': 'Crispy Roast',
-  'sizzling-burn': 'Sizzling Burn',
-  'extra-spicy': 'Extra Spicy',
-  'savage-flame': 'Savage Flame',
-  'nuclear-roast': 'Nuclear Roast'
+  "mild-toast": "Mild Toast",
+  "medium-burn": "Medium Burn",
+  "crispy-roast": "Crispy Roast",
+  "sizzling-burn": "Sizzling Burn",
+  "extra-spicy": "Extra Spicy",
+  "savage-flame": "Savage Flame",
+  "nuclear-roast": "Nuclear Roast",
 }
 
-const soundEffects = [
-  '/sound1.mp3',
-  '/sound2.mp3',
-  '/sound3.mp3',
-  '/sound4.mp3',
-  '/sound5.mp3',
-  '/sound6.mp3'
-]
+const soundEffects = ["/sound1.mp3", "/sound2.mp3", "/sound3.mp3", "/sound4.mp3", "/sound5.mp3", "/sound6.mp3"]
 
 export default function RoastGenerator() {
-  const [theme, setTheme] = useState<Theme>('random')
-  const [roastLevel, setRoastLevel] = useState<RoastLevel>('medium-burn')
-  const [roast, setRoast] = useState('')
+  const [theme, setTheme] = useState<Theme>("random")
+  const [roastLevel, setRoastLevel] = useState<RoastLevel>("medium-burn")
+  const [roast, setRoast] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [emoji, setEmoji] = useState('')
+  const [emoji, setEmoji] = useState("")
   const [isHovering, setIsHovering] = useState(false)
-  const [roastTarget, setRoastTarget] = useState('')
+  const [roastTarget, setRoastTarget] = useState("")
   const [userId] = useState(getUserId())
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const debouncedSetRoastTarget = useCallback(
     debounce((value: string) => {
       // Perform any expensive operations here
-      console.log('Debounced value:', value)
+      console.log("Debounced value:", value)
       // You can add any other operations that need to be debounced
     }, 300),
-    []
-  );
+    [],
+  )
   useEffect(() => {
     return () => {
-      debouncedSetRoastTarget.cancel();
-    };
-  }, [debouncedSetRoastTarget]);
+      debouncedSetRoastTarget.cancel()
+    }
+  }, [debouncedSetRoastTarget])
 
   useEffect(() => {
     audioRef.current = new Audio()
   }, [])
 
-  const playRandomSound = (delay: number = 0) => {
+  const playRandomSound = (delay = 0) => {
     setTimeout(() => {
       if (audioRef.current) {
         const randomSound = soundEffects[Math.floor(Math.random() * soundEffects.length)]
         audioRef.current.src = randomSound
-        audioRef.current.play().catch(error => console.error('Error playing sound:', error))
+        audioRef.current.play().catch((error) => console.error("Error playing sound:", error))
       }
     }, delay)
   }
 
   const handleRoast = async (surpriseMe = false) => {
     setIsLoading(true)
-    const roastTheme = surpriseMe ? 'random' : theme
+    const roastTheme = surpriseMe ? "random" : theme
+    const target = surpriseMe ? undefined : roastTarget
     try {
-      const generatedRoast = await generateRoast(surpriseMe ? undefined : roastTarget, roastTheme, roastLevel)
+      const generatedRoast = await generateRoast(target, roastTheme, roastLevel)
       setRoast(generatedRoast)
       setEmoji(emojis[Math.floor(Math.random() * emojis.length)])
       if (!generatedRoast.startsWith("Invalid input") && !generatedRoast.startsWith("Sorry, I couldn't")) {
         playRandomSound(1000) // 1000 milliseconds = 1 second delay
       }
     } catch (error) {
-      console.error('Error generating roast:', error)
+      console.error("Error generating roast:", error)
       setRoast("Oops! Something went wrong. Please try again.")
     } finally {
       setIsLoading(false)
@@ -99,12 +100,12 @@ export default function RoastGenerator() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Check out this roast!',
+          title: "Check out this roast!",
           text: roast,
           url: window.location.href,
         })
       } catch (error) {
-        console.error('Error sharing:', error)
+        console.error("Error sharing:", error)
       }
     } else {
       await navigator.clipboard.writeText(roast)
@@ -140,14 +141,14 @@ export default function RoastGenerator() {
       <Card className="bg-[#232323] border-0 shadow-2xl">
         <CardContent className="p-3">
           <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <Input
                 type="text"
                 placeholder="Enter name, description, or anything about the roast target"
                 value={roastTarget}
                 onChange={(e) => {
-                  setRoastTarget(e.target.value); // Immediate update for responsive typing
-                  debouncedSetRoastTarget(e.target.value); // Debounced operation
+                  setRoastTarget(e.target.value) // Immediate update for responsive typing
+                  debouncedSetRoastTarget(e.target.value) // Debounced operation
                 }}
                 className="bg-[#2A2A2A] border-0 text-white placeholder-gray-400 h-12"
               />
@@ -160,14 +161,30 @@ export default function RoastGenerator() {
                     <SelectValue placeholder="Select a roast flavor" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#2A2A2A] border-[#333333]">
-                    <SelectItem value="gamer" className="text-gray-300">Gamer Burn</SelectItem>
-                    <SelectItem value="work" className="text-gray-300">Office Roast</SelectItem>
-                    <SelectItem value="sibling" className="text-gray-300">Sibling Rivalry</SelectItem>
-                    <SelectItem value="tech-nerd" className="text-gray-300">Tech Nerd Takedown</SelectItem>
-                    <SelectItem value="foodie" className="text-gray-300">Culinary Critic</SelectItem>
-                    <SelectItem value="fitness-freak" className="text-gray-300">Gym Junkie Jabs</SelectItem>
-                    <SelectItem value="social-media-addict" className="text-gray-300">Social Media Mockery</SelectItem>
-                    <SelectItem value="random" className="text-gray-300">Random Roast</SelectItem>
+                    <SelectItem value="gamer" className="text-gray-300">
+                     🌶️ Gamer Burn
+                    </SelectItem>
+                    <SelectItem value="work" className="text-gray-300">
+                      😬 Office Roast
+                    </SelectItem>
+                    <SelectItem value="sibling" className="text-gray-300">
+                      🍠 Sibling Rivalry
+                    </SelectItem>
+                    <SelectItem value="tech-nerd" className="text-gray-300">
+                      🤓 Tech Nerd Takedown
+                    </SelectItem>
+                    <SelectItem value="foodie" className="text-gray-300">
+                     🤐 Culinary Critic
+                    </SelectItem>
+                    <SelectItem value="fitness-freak" className="text-gray-300">
+                     💪 Gym Junkie Jabs
+                    </SelectItem>
+                    <SelectItem value="social-media-addict" className="text-gray-300">
+                     ❤️‍🔥 Social Media Mockery
+                    </SelectItem>
+                    <SelectItem value="random" className="text-gray-300">
+                     🔥 Random Roast
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -190,9 +207,9 @@ export default function RoastGenerator() {
               </div>
             </div>
 
-            <Button 
-              onClick={() => handleRoast()} 
-              disabled={isLoading} 
+            <Button
+              onClick={() => handleRoast()}
+              disabled={isLoading || !roastTarget.trim()}
               className="w-full bg-[#FFB800] hover:bg-[#FFA800] text-black font-semibold h-12 disabled:opacity-50"
             >
               {isLoading ? (
@@ -200,7 +217,7 @@ export default function RoastGenerator() {
                   Cooking up a roast...
                   <motion.div
                     animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
                     className="inline-block ml-2"
                   >
                     <Zap className="w-4 h-4" />
@@ -230,10 +247,7 @@ export default function RoastGenerator() {
                   >
                     {emoji}
                   </motion.span>
-                  <Button
-                    onClick={handleShare}
-                    className="mt-4 bg-[#3A3A3A] hover:bg-[#4A4A4A] text-white"
-                  >
+                  <Button onClick={handleShare} className="mt-4 bg-[#3A3A3A] hover:bg-[#4A4A4A] text-white">
                     <Share2 className="w-4 h-4 mr-2" />
                     Share Roast
                   </Button>
@@ -248,16 +262,16 @@ export default function RoastGenerator() {
           animate={{ rotate: 10, y: [0, -10, 0] }}
           transition={{
             rotate: {
-              repeat: Infinity,
+              repeat: Number.POSITIVE_INFINITY,
               repeatType: "reverse",
-              duration: 2
+              duration: 2,
             },
             y: {
-              repeat: Infinity,
+              repeat: Number.POSITIVE_INFINITY,
               repeatType: "reverse",
               duration: 3,
-              ease: "easeInOut"
-            }
+              ease: "easeInOut",
+            },
           }}
         >
           <motion.button
@@ -273,18 +287,20 @@ export default function RoastGenerator() {
           </motion.button>
         </motion.div>
       </Card>
-      <p className="text-gray-600 italic text-sm md:absolute md:transform md:rotate-6 md:-right-52  md:-translate-y-1/2 md:w-48 sm:static sm:mt-2 mb-2 testx-center sm:transform-none sm:rotate-0 sm:text-center text-gray-300 sm:w-auto">Roasts are spicy—handle with humor, NOT ANGER!</p> 
+      <p className="text-gray-600 italic text-sm md:absolute md:transform md:rotate-6 md:-right-52  md:-translate-y-1/2 md:w-48 sm:static sm:mt-2 mb-2 testx-center sm:transform-none sm:rotate-0 sm:text-center text-gray-300 sm:w-auto">
+        Roasts are spicy—handle with humor, NOT ANGER!
+      </p>
 
       <StatsDisplay />
 
       {/* CTA Section */}
-      <motion.div 
+      <motion.div
         className="mt-12 bg-[#2A2A2A] rounded-xl p-6 text-center relative overflow-hidden"
         whileHover={{ scale: 1.05 }}
         transition={{ type: "spring", stiffness: 300 }}
       >
         <Link href="/ai-roast-bot" className="block">
-          <motion.div 
+          <motion.div
             className="absolute inset-0 bg-gradient-to-r from-[#FFB800] to-[#FF8A00] opacity-0"
             animate={{ opacity: isHovering ? 0.2 : 0 }}
           />
@@ -294,8 +310,8 @@ export default function RoastGenerator() {
             onMouseLeave={() => setIsHovering(false)}
           >
             <h3 className="text-2xl font-bold mb-2 text-white">Ready for a Real Challenge?</h3>
-            <p className="text-gray-300 mb-4">Bring It, Human. The Bot’s Got Daddy Issues and a PhD in Sass.</p>
-            <motion.div 
+            <p className="text-gray-300 mb-4">Bring It, Human. The Bot's Got Daddy Issues and a PhD in Sass.</p>
+            <motion.div
               className="inline-flex items-center gap-2 bg-[#FFB800] text-black font-semibold py-2 px-4 rounded-full"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.95 }}
@@ -315,7 +331,7 @@ export default function RoastGenerator() {
             duration: 4,
             ease: "easeInOut",
             times: [0, 0.5, 1],
-            repeat: Infinity,
+            repeat: Number.POSITIVE_INFINITY,
           }}
         />
       </motion.div>
