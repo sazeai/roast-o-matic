@@ -11,7 +11,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import StatsDisplay from "./StatsDisplay"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
-import { getUserId } from "@/utils/userIdentification"
 import debounce from "lodash/debounce"
 
 type Theme = "gamer" | "work" | "sibling" | "random" | "tech-nerd" | "foodie" | "fitness-freak" | "social-media-addict"
@@ -46,7 +45,6 @@ export default function RoastGenerator() {
   const [emoji, setEmoji] = useState("")
   const [isHovering, setIsHovering] = useState(false)
   const [roastTarget, setRoastTarget] = useState("")
-  const [userId] = useState(getUserId())
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const debouncedSetRoastTarget = useCallback(
